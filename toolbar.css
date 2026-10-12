@@ -493,7 +493,64 @@
     left: 8px;
     width: auto;
     max-height: 52vh;
+    max-height: 52dvh; /* 手机浏览器地址栏伸缩时，按实际看得到的高度算 */
+    border-radius: 22px;
     transform-origin: bottom center;
+  }
+
+  /* 键盘弹出时：面板贴在键盘上面 */
+  .ui.kb-open .popover {
+    bottom: calc(var(--kb) + 8px);
+    max-height: calc(100dvh - var(--kb) - 24px);
+  }
+
+  /* 顶部的小横条：提示可以往下拖着关掉 */
+  .popover .grabber {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    z-index: 1;
+    display: block;
+    width: 36px;
+    height: 5px;
+    margin-left: -18px;
+    border-radius: 3px;
+    background: rgba(60, 60, 67, 0.28);
+  }
+
+  .popover-body {
+    padding-top: 24px;
+  }
+
+  /* 手指比鼠标粗：可以点的东西都放大一点 */
+  .swatches {
+    gap: 12px;
+  }
+
+  .swatch {
+    width: 34px;
+    height: 34px;
+  }
+
+  .swatches.large .swatch {
+    width: 40px;
+    height: 40px;
+  }
+
+  .segmented button {
+    height: 34px;
+  }
+
+  .link-btn {
+    padding: 8px 4px;
+  }
+
+  .btn {
+    height: 36px;
+  }
+
+  .tool:hover {
+    background: transparent;
   }
 
   .popover.is-in {
@@ -512,6 +569,15 @@
   .toast {
     bottom: calc(100px + env(safe-area-inset-bottom));
   }
+}
+
+.grabber {
+  display: none;
+}
+
+/* 面板里可以上下滑动（页面整体禁止了手指滑动） */
+.popover-body {
+  touch-action: pan-y;
 }
 
 @keyframes sheet-in {

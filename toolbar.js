@@ -67,8 +67,9 @@ export function createToolbar({ store, badge }) {
   }
   const pop = h('section', { class: 'popover glass', role: 'dialog', hidden: '' });
   const arrow = h('div', { class: 'popover-arrow', 'aria-hidden': 'true' });
+  const grabber = h('div', { class: 'grabber', 'aria-hidden': 'true' }); // 手机上顶部那条小横条
   const body = h('div', { class: 'popover-body' });
-  pop.append(arrow, body);
+  pop.append(arrow, grabber, body);
   const toastEl = h('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
   root.append(bar, pop, toastEl);
   document.body.append(root);
@@ -126,6 +127,58 @@ export function createToolbar({ store, badge }) {
   }
   new ResizeObserver(position).observe(pop);
   window.addEventListener('resize', position);
+
+  // 手机：按住面板顶部往下拖，就能把面板关掉（跟 iPhone 上的弹出卡片一样）
+  let swipe = null;
+  pop.addEventListener('pointerdown', (e) => {
+    if (!narrow.matches || e.target.closest('button, input, label')) return;
+    if (e.clientY - pop.getBoundingClientRect().top > 64) return; // 只认顶部那一截
+    swipe = { id: e.pointerId, y: e.clientY, t: performance.now(), dy: 0 };
+    try {
+      pop.setPointerCapture(e.pointerId); // 手指滑出面板也继续跟着
+    } catch {
+      // 拿不到也没关系，照样能拖
+    }
+    pop.style.transition = 'none';
+  });
+  pop.addEventListener('pointermove', (e) => {
+    if (!swipe || e.pointerId !== swipe.id) return;
+    swipe.dy = Math.max(0, e.clientY - swipe.y);
+    pop.style.transform = `translateY(${swipe.dy}px)`;
+  });
+  const endSwipe = () => {
+    if (!swipe) return;
+    const { dy, t } = swipe;
+    swipe = null;
+    const flicked = dy / (performance.now() - t) > 0.6;
+    pop.style.transition = 'transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)';
+    if (dy > 90 || (flicked && dy > 24)) {
+      pop.style.transform = 'translateY(110%)';
+      setTimeout(() => {
+        close();
+        pop.style.transform = pop.style.transition = '';
+      }, 220);
+    } else {
+      pop.style.transform = '';
+      setTimeout(() => (pop.style.transition = ''), 260);
+    }
+  };
+  pop.addEventListener('pointerup', endSwipe);
+  pop.addEventListener('pointercancel', endSwipe);
+
+  // 手机：键盘弹出来时，把面板抬到键盘上面，免得输入框被挡住
+  const vv = window.visualViewport;
+  if (vv) {
+    const avoidKeyboard = () => {
+      const keyboard = window.innerHeight - vv.height - vv.offsetTop;
+      const open = narrow.matches && keyboard > 80;
+      root.classList.toggle('kb-open', open);
+      root.style.setProperty('--kb', `${open ? keyboard : 0}px`);
+      position();
+    };
+    vv.addEventListener('resize', avoidKeyboard);
+    vv.addEventListener('scroll', avoidKeyboard);
+  }
 
   // 点面板外面就关掉（点到卡片不算，方便边改边看、拆开时点选某一页）
   document.addEventListener(

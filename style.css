@@ -32,12 +32,17 @@ body {
   position: fixed;
   inset: 0;
   overflow: hidden;
+  /* 手机上长按别弹出"拷贝/查询"菜单，点按也别闪一下灰底 */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 /* 左上、右上的小字 */
 .corner {
   position: absolute;
-  top: var(--edge-y);
+  /* 刘海屏的手机，顶部要再让出状态栏那一块 */
+  top: max(var(--edge-y), calc(env(safe-area-inset-top) + 14px));
   z-index: 2;
   max-width: 22em;
   font-size: clamp(13px, 1.1vw, 16px);
@@ -115,6 +120,35 @@ body {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* 名字分两行叠起来（手机竖屏、固定模式时由 main.js 加上 stacked） */
+.marquee.stacked {
+  line-height: 0.88;
+}
+
+.marquee.stacked .marquee-track {
+  flex-direction: column;
+}
+
+/* ---------- 手机竖屏 ---------- */
+@media (max-width: 640px) and (orientation: portrait) {
+  /* 两角小字各占一边，中间让出一条路给挂绳 */
+  .corner {
+    max-width: calc(50% - var(--edge-x) - 36px);
+    font-size: 13px;
+  }
+
+  /* 栏太窄，不按 config.js 里写的 \n 换行，改成按宽度自动折行 */
+  #top-left,
+  .corner-right {
+    white-space: normal;
+  }
+
+  /* 大名字挪到底部工具栏上面，不被工具栏挡住 */
+  .marquee {
+    bottom: calc(96px + env(safe-area-inset-bottom));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

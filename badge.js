@@ -87,7 +87,9 @@ export async function createBadge(container, feel) {
   const sun = new THREE.DirectionalLight(0xffffff, 1.1);
   sun.position.set(-3.6, 6, 9);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  // 手机屏幕小，影子贴图降一档，省点显卡
+  const shadowSize = Math.min(window.innerWidth, window.innerHeight) < 700 ? 1024 : 2048;
+  sun.shadow.mapSize.set(shadowSize, shadowSize);
   Object.assign(sun.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 30 });
   sun.shadow.radius = 7;
   sun.shadow.bias = -0.0004;
@@ -224,8 +226,10 @@ export async function createBadge(container, feel) {
     RAPIER.ColliderDesc.ball(0.05).setMass(0.05),
   );
 
+  // 竖屏手机上 V 字收窄一点，免得挂绳压住左上、右上的小字
+  const anchorX = window.innerWidth / window.innerHeight < 0.75 ? 0.5 : STRAP.anchorX;
   const strands = [-1, 1].map((side) => {
-    const anchorPos = new THREE.Vector3(side * STRAP.anchorX, STRAP.anchorY, 0);
+    const anchorPos = new THREE.Vector3(side * anchorX, STRAP.anchorY, 0);
     const anchor = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(anchorPos.x, anchorPos.y, 0));
     const segLen = anchorPos.distanceTo(junctionRest) / STRAP.segments;
     const bodies = [anchor];
@@ -284,8 +288,12 @@ export async function createBadge(container, feel) {
   const hitPage = () => raycaster.intersectObjects(pagePickables, false)[0];
   // 点在工具栏上的不算点卡片
   const onUI = (e) => e.target instanceof Element && e.target.closest('[data-ui]');
+  const spin = () => cardBody.applyTorqueImpulse({ x: 0, y: 2.4, z: 0 }, true);
+  let lastPointerType = 'mouse';
+  let lastTap = { t: 0, x: 0, y: 0 };
 
   window.addEventListener('pointerdown', (e) => {
+    lastPointerType = e.pointerType;
     if (onUI(e)) return;
     setPointer(e.clientX, e.clientY);
     if (mode === 'explode') {
@@ -299,6 +307,12 @@ export async function createBadge(container, feel) {
     const hit = hitCard();
     if (!hit) return;
     e.preventDefault();
+    // 手机上没有"双击"，连着点两下卡片就当成双击
+    const now = performance.now();
+    if (e.pointerType !== 'mouse' && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
+      spin();
+    }
+    lastTap = { t: now, x: e.clientX, y: e.clientY };
     card.updateMatrixWorld();
     drag.active = true;
     drag.local.copy(card.worldToLocal(hit.point.clone()));
@@ -323,11 +337,11 @@ export async function createBadge(container, feel) {
   window.addEventListener('pointercancel', release);
   window.addEventListener('blur', release);
 
-  // 双击卡片：转一圈，看看背面
+  // 双击卡片：转一圈，看看背面（手指点的在上面 pointerdown 里处理了）
   window.addEventListener('dblclick', (e) => {
-    if (mode !== 'hang' || onUI(e)) return;
+    if (mode !== 'hang' || onUI(e) || lastPointerType !== 'mouse') return;
     setPointer(e.clientX, e.clientY);
-    if (hitCard()) cardBody.applyTorqueImpulse({ x: 0, y: 2.4, z: 0 }, true);
+    if (hitCard()) spin();
   });
 
   // ================= 每一步物理之前 =================
@@ -374,6 +388,7 @@ export async function createBadge(container, feel) {
   }
 
   // ================= 每一帧：拆开/选中的过渡、镜头移动 =================
+  let dirty = true; // 有东西变了、需要重画一帧
   const view = { h: MIN_VIEW_H, camY: 0 }; // 平时的镜头：能看到多高、对准哪里
   const inset = { right: 0, bottom: 0 }; // 被工具栏面板挡住的那部分屏幕（像素）
   const cam = { x: 0, y: 0, h: MIN_VIEW_H }; // 镜头当前的位置和"能看到多高"（平滑地追向目标）
@@ -463,13 +478,14 @@ export async function createBadge(container, feel) {
     const h = window.innerHeight;
     const aspect = w / h;
     renderer.setSize(w, h, false);
-    // 竖屏手机上把镜头拉远一点，免得卡片太大
-    view.h = Math.max(MIN_VIEW_H, HOLDER.w / 0.52 / aspect);
+    // 竖屏手机上把镜头拉远一点，免得卡片太大、把底部的大名字整个盖住
+    view.h = Math.max(aspect < 0.75 ? 7 : MIN_VIEW_H, HOLDER.w / 0.52 / aspect);
     view.camY = VIEW_TOP - view.h / 2;
     camera.aspect = aspect;
     camera.updateProjectionMatrix();
     Object.assign(cam, cameraTarget());
     placeCamera();
+    dirty = true;
   }
   window.addEventListener('resize', resize);
   resize();
@@ -494,6 +510,13 @@ export async function createBadge(container, feel) {
   }
 
   // ================= 主循环 =================
+  // 卡片停稳、没人碰、也没有动画在走的时候，就不再每帧重画（手机上省电）
+  let stillFrames = 0;
+  const isStill = () => {
+    if (mode !== 'hang' || drag.active || explode > 0.001 || !cardBody.isSleeping()) return false;
+    const t = cameraTarget();
+    return Math.abs(t.x - cam.x) + Math.abs(t.y - cam.y) + Math.abs(t.h - cam.h) < 1e-4;
+  };
   let last = performance.now();
   let acc = 0;
   renderer.setAnimationLoop((now) => {
@@ -508,6 +531,9 @@ export async function createBadge(container, feel) {
       acc -= STEP;
       n++;
     }
+    stillFrames = isStill() && !dirty ? stillFrames + 1 : 0;
+    if (stillFrames > 2) return;
+    dirty = false;
     sync();
     renderer.render(scene, camera);
   });
@@ -520,9 +546,11 @@ export async function createBadge(container, feel) {
       drawPage(p.canvas, kind, content, page, image);
       p.texture.needsUpdate = true;
       p.paper.set(page.bg);
+      dirty = true;
     },
     setStrapColor(color) {
       strapMat.color.set(color);
+      dirty = true;
     },
     setExplode(on) {
       if (on === (mode === 'explode')) return;
@@ -545,6 +573,7 @@ export async function createBadge(container, feel) {
     },
     select(kind) {
       selected = kind;
+      dirty = true;
     },
     onPick(fn) {
       onPick = fn;
@@ -553,6 +582,7 @@ export async function createBadge(container, feel) {
     setViewInset({ right = 0, bottom = 0 } = {}) {
       inset.right = right;
       inset.bottom = bottom;
+      dirty = true;
     },
     // 屏幕上这个点有没有点到卡片（拆开时只算三页）
     hits(x, y) {

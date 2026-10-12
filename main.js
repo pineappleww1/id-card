@@ -25,9 +25,8 @@ else more.remove();
 
 const marquee = createMarquee(feel.marqueeSecondsPerName);
 const showName = () => {
-  const name = fullName(store.state.line1, store.state.line2);
-  marquee.setText(name || ' ');
-  document.title = name || 'Lin-creat';
+  marquee.setName(store.state.line1, store.state.line2);
+  document.title = fullName(store.state.line1, store.state.line2) || 'Lin-creat';
 };
 showName();
 start();
@@ -79,23 +78,39 @@ async function start() {
 
 // 底部大字。
 // 固定模式：名字只放一遍，字号自动调到刚好铺满屏幕宽。
+//   手机竖屏上屏幕太窄，一行放不大，就把两行名字上下叠起来，每行都尽量铺满。
 // 滚动模式：把名字重复到够铺满两屏宽，整条往左移一半再从头来，看起来就是无缝循环。
 function createMarquee(secondsPerName) {
+  const STACK_LINE_HEIGHT = 0.88; // 跟 style.css 里 .marquee.stacked 的行高一致
   const track = document.getElementById('marquee-track');
   const box = track.parentElement;
+  const phonePortrait = window.matchMedia('(max-width: 640px) and (orientation: portrait)');
+  let lines = ['', ''];
   let text = '';
 
   const render = () => {
     if (!(secondsPerName > 0)) {
-      const span = document.createElement('span');
-      span.textContent = text;
-      span.style.paddingRight = '0';
-      track.replaceChildren(span);
+      const stacked = phonePortrait.matches && lines.filter(Boolean).length === 2;
+      box.classList.toggle('stacked', stacked);
+      const spans = (stacked ? lines : [text || ' ']).map((t) => {
+        const span = document.createElement('span');
+        span.textContent = t;
+        span.style.paddingRight = '0';
+        return span;
+      });
+      track.replaceChildren(...spans);
       track.style.animation = 'none';
       box.style.fontSize = '';
-      const base = parseFloat(getComputedStyle(box).fontSize);
-      const fitted = (base * window.innerWidth) / (span.getBoundingClientRect().width || 1);
-      box.style.fontSize = `${Math.min(fitted, window.innerHeight * 0.45)}px`;
+      const style = getComputedStyle(box);
+      const base = parseFloat(style.fontSize);
+      const widest = Math.max(1, ...spans.map((s) => s.getBoundingClientRect().width));
+      let size = (base * window.innerWidth) / widest;
+      if (stacked) {
+        // 大名字最高只到屏幕高度的 58% 处，免得被卡片整个盖住
+        const room = window.innerHeight * 0.42 - parseFloat(style.bottom);
+        size = Math.min(size, room / (2 * STACK_LINE_HEIGHT));
+      } else size = Math.min(size, window.innerHeight * 0.45);
+      box.style.fontSize = `${size}px`;
       return;
     }
 
@@ -116,6 +131,7 @@ function createMarquee(secondsPerName) {
   };
 
   document.fonts.ready.then(render);
+  phonePortrait.addEventListener('change', render);
   let timer;
   window.addEventListener('resize', () => {
     clearTimeout(timer);
@@ -123,8 +139,9 @@ function createMarquee(secondsPerName) {
   });
 
   return {
-    setText(next) {
-      text = next;
+    setName(line1, line2) {
+      lines = [line1.trim(), line2.trim()];
+      text = fullName(line1, line2);
       render();
     },
   };
