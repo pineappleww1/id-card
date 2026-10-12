@@ -4,6 +4,8 @@
 做法参照了 samfcheng.com 的设计：three.js 负责画 3D，Rapier 负责物理（重力、挂绳拉扯、甩动）。
 代码是我们自己从头写的，没有用原作者的代码。
 
+**在线玩：https://pineappleww1.github.io/id-card/**（手机、电脑都能打开）
+
 ## 怎么跑起来
 
 ```bash
@@ -59,7 +61,11 @@ npm run dev
 | `main.js` | 把上面这些拼起来 |
 | `设计清单.md` | 字体、颜色、布局的具体数值 |
 
-## 想发给不在身边的朋友
+## 更新线上网页
 
-运行 `npm run build`，会生成一个 `dist` 文件夹。
-把这个文件夹放到任意静态网站托管服务上（比如 Vercel），别人就能打开了。
+网页放在 GitHub Pages 上，内容来自仓库里的 `gh-pages` 分支。改完代码后：
+
+1. 运行 `npm run build`，生成 `dist` 文件夹
+2. 把 `dist` 里的东西推到 `gh-pages` 分支，几十秒后网页就会更新
+
+不想自己弄的话，跟 Claude 说「推一下并更新网页」就行。
