@@ -1,0 +1,533 @@
+/* 右侧工具栏：仿苹果系统的工具栏 / 浮层面板
+   毛玻璃底、系统字体、蓝色表示"选中"、分段控件、圆形色块。
+   跟页面本身（Newsreader 衬线字）是两套字体：工具栏属于"操作界面"，用系统字体。 */
+
+.ui {
+  --ui-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif;
+  --ui-label: #1d1d1f;
+  --ui-secondary: rgba(60, 60, 67, 0.62);
+  --ui-tertiary: rgba(60, 60, 67, 0.32);
+  --ui-fill: rgba(118, 118, 128, 0.12);
+  --ui-fill-strong: rgba(118, 118, 128, 0.2);
+  --ui-separator: rgba(60, 60, 67, 0.16);
+  --ui-blue: #007aff;
+  --ui-blue-soft: rgba(0, 122, 255, 0.12);
+  --ui-red: #ff3b30;
+  --glass: rgba(250, 250, 252, 0.74);
+  --glass-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --spring: cubic-bezier(0.32, 0.72, 0, 1);
+
+  font-family: var(--ui-font);
+  color: var(--ui-label);
+  -webkit-font-smoothing: antialiased;
+}
+
+.ui button,
+.ui input {
+  font: inherit;
+  color: inherit;
+}
+
+.ui :focus-visible {
+  outline: 3px solid rgba(0, 122, 255, 0.45);
+  outline-offset: 2px;
+}
+
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+/* ---------- 工具栏本体 ---------- */
+.toolbar {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 22px;
+  transform: translateY(-50%);
+}
+
+.tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 60px;
+  height: 58px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.12s;
+}
+
+.tool svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tool span {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.tool:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.tool:active {
+  transform: scale(0.95);
+}
+
+.tool[aria-pressed='true'] {
+  background: var(--ui-blue-soft);
+  color: var(--ui-blue);
+}
+
+/* ---------- 浮层面板 ---------- */
+.popover {
+  position: fixed;
+  top: 16px;
+  right: 108px;
+  z-index: 19;
+  display: flex;
+  flex-direction: column;
+  width: 304px;
+  max-height: calc(100vh - 32px);
+  border-radius: 18px;
+  transform-origin: right center;
+}
+
+.popover[hidden] {
+  display: none;
+}
+
+.popover.is-in {
+  animation: pop-in 0.32s var(--spring);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px) scale(0.97);
+  }
+}
+
+/* 指向按钮的小三角 */
+.popover-arrow {
+  position: absolute;
+  top: 50%;
+  right: -9px;
+  width: 10px;
+  height: 22px;
+  margin-top: -11px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.popover-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 16px 18px;
+  border-radius: inherit;
+}
+
+.pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.pop-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.link-btn {
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--ui-blue);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.link-btn:disabled {
+  color: var(--ui-tertiary);
+  cursor: default;
+}
+
+.section-label {
+  margin: 18px 4px 8px;
+  color: var(--ui-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.note {
+  margin: 10px 4px 0;
+  color: var(--ui-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* 分组列表（像系统设置里那种白底圆角的一组） */
+.group {
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.row + .row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 12px;
+  height: 0.5px;
+  background: var(--ui-separator);
+}
+
+.row label {
+  flex: none;
+  width: 48px;
+  font-size: 14px;
+}
+
+.row input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  outline: none;
+}
+
+.row input::placeholder {
+  color: var(--ui-tertiary);
+}
+
+/* 分段控件 */
+.segmented {
+  position: relative;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--ui-fill);
+}
+
+.segmented button {
+  position: relative;
+  z-index: 1;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.segmented button[aria-selected='true'] {
+  font-weight: 600;
+}
+
+.seg-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--n));
+  border-radius: 7px;
+  background: #fff;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 3px 1px rgba(0, 0, 0, 0.04),
+    0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  transition: transform 0.3s var(--spring);
+}
+
+/* 模板缩略图 */
+.templates {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 10px;
+}
+
+.tpl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.tpl canvas {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.14),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.tpl:hover canvas {
+  transform: translateY(-1px);
+}
+
+.tpl[aria-checked='true'] canvas {
+  box-shadow:
+    0 0 0 2.5px var(--ui-blue),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.tpl span {
+  color: var(--ui-secondary);
+  font-size: 11px;
+}
+
+.tpl[aria-checked='true'] span {
+  color: var(--ui-blue);
+  font-weight: 600;
+}
+
+/* 圆形色块 */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 2px 4px;
+}
+
+.swatch {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.16);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.swatch:hover {
+  transform: scale(1.08);
+}
+
+.swatch[aria-checked='true'] {
+  box-shadow:
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.16),
+    0 0 0 2px #fff,
+    0 0 0 4px var(--ui-blue);
+}
+
+/* 自定义颜色：彩虹圈，中间是当前颜色 */
+.swatch.well {
+  display: block;
+  background: conic-gradient(#ff3b30, #ff9500, #ffcc00, #34c759, #00c7be, #007aff, #5856d6, #af52de, #ff2d55, #ff3b30);
+}
+
+.swatch.well::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--c, #fff);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.swatch.well input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.swatches.large .swatch {
+  width: 34px;
+  height: 34px;
+}
+
+/* 按钮 */
+.image-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--ui-fill);
+  color: var(--ui-blue) !important;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--ui-fill-strong);
+}
+
+.btn:disabled {
+  color: var(--ui-tertiary) !important;
+  cursor: default;
+}
+
+.btn.danger {
+  color: var(--ui-red) !important;
+}
+
+.image-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.16);
+}
+
+.btn-primary {
+  width: 100%;
+  height: 38px;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--ui-blue);
+  color: #fff !important;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:active {
+  opacity: 0.85;
+}
+
+/* 底部小提示（比如"图片太大存不下"） */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  z-index: 30;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(30, 30, 32, 0.88);
+  color: #fff;
+  font-size: 13px;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.3s var(--spring);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------- 手机：工具栏横着放在底部，面板从下面弹出 ---------- */
+@media (max-width: 640px) {
+  .toolbar {
+    top: auto;
+    right: auto;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 50%;
+    flex-direction: row;
+    transform: translateX(-50%);
+  }
+
+  .popover {
+    top: auto !important;
+    right: 8px;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    left: 8px;
+    width: auto;
+    max-height: 52vh;
+    transform-origin: bottom center;
+  }
+
+  .popover.is-in {
+    animation-name: sheet-in;
+  }
+
+  .popover-arrow {
+    display: none;
+  }
+
+  /* 输入框字号小于 16px 时，iPhone 会自动放大页面 */
+  .row input {
+    font-size: 16px;
+  }
+
+  .toast {
+    bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover.is-in {
+    animation: none;
+  }
+
+  .seg-thumb,
+  .toast {
+    transition: none;
+  }
+}
