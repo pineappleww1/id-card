@@ -3,6 +3,7 @@
 
 import { PAGE_KINDS, PAGE_LABELS, TEMPLATES, drawPage, findTemplate } from './card-texture.js';
 import { compressImage, loadImage } from './store.js';
+import { exportAllPdfs, exportPagePdf, PRINT_MM } from './export-pdf.js';
 
 const SVG = (paths) => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
 const ICONS = {
@@ -297,6 +298,9 @@ export function createToolbar({ store, badge }) {
           sectionLabel('图片'),
           imageRow,
           note('带「照片」「全图」的模板会用上这张图。也可以直接点卡片上的某一页来切换。'),
+          sectionLabel('导出 PDF'),
+          exportRow(),
+          note(`每页单独一个 PDF，实际尺寸 ${PRINT_MM[0]} × ${Math.round(PRINT_MM[1])} 毫米。打印时选「实际大小」或 100%。`),
         );
         refresh();
       }
@@ -315,6 +319,29 @@ export function createToolbar({ store, badge }) {
           drawPage(c, coverKind, store.content, { ...page, template: t.id }, img);
         }
         renderImageRow(page);
+      }
+
+      function exportRow() {
+        const row = h('div', { class: 'image-row' });
+        const one = h('button', { type: 'button', class: 'btn', text: `导出${PAGE_LABELS[coverKind]}` });
+        const all = h('button', { type: 'button', class: 'btn', text: '三页都导出' });
+        const run = async (btn, job) => {
+          const label = btn.textContent;
+          one.disabled = all.disabled = true;
+          btn.textContent = '导出中…';
+          try {
+            await job();
+          } catch {
+            toast('导出没成功，再试一次');
+          } finally {
+            one.disabled = all.disabled = false;
+            btn.textContent = label;
+          }
+        };
+        one.addEventListener('click', () => run(one, () => exportPagePdf(store, coverKind)));
+        all.addEventListener('click', () => run(all, () => exportAllPdfs(store)));
+        row.append(one, all);
+        return row;
       }
 
       function renderImageRow(page) {
